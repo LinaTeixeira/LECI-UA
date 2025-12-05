@@ -1,0 +1,68 @@
+==8361== Memcheck, a memory error detector
+==8361== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==8361== Using Valgrind-3.22.0 and LibVEX; rerun with -h for copyright info
+==8361== Command: ./primes
+==8361== Parent PID: 3557
+==8361== 
+==8361== Invalid write of size 4
+==8361==    at 0x1091DB: main (primes.c:19)
+==8361==  Address 0x4b75280 is 0 bytes after a block of size 1,000,000 alloc'd
+==8361==    at 0x4846828: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==8361==    by 0x1091A8: main (primes.c:15)
+==8361== 
+==8361== Invalid write of size 4
+==8361==    at 0x109245: main (primes.c:24)
+==8361==  Address 0x4b75280 is 0 bytes after a block of size 1,000,000 alloc'd
+==8361==    at 0x4846828: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==8361==    by 0x1091A8: main (primes.c:15)
+==8361== 
+==8361== Invalid read of size 4
+==8361==    at 0x10928C: main (primes.c:27)
+==8361==  Address 0x4b75280 is 0 bytes after a block of size 1,000,000 alloc'd
+==8361==    at 0x4846828: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==8361==    by 0x1091A8: main (primes.c:15)
+==8361== 
+--8361-- VALGRIND INTERNAL ERROR: Valgrind received a signal 11 (SIGSEGV) - exiting
+--8361-- si_code=1;  Faulting address: 0x104B75298;  sp: 0x1002da9df0
+
+valgrind: the 'impossible' happened:
+   Killed by fatal signal
+
+host stacktrace:
+==8361==    at 0x5804EF19: ??? (in /usr/libexec/valgrind/memcheck-amd64-linux)
+==8361==    by 0x5800525C: ??? (in /usr/libexec/valgrind/memcheck-amd64-linux)
+==8361==    by 0x5800544D: ??? (in /usr/libexec/valgrind/memcheck-amd64-linux)
+==8361==    by 0x5809E9C8: ??? (in /usr/libexec/valgrind/memcheck-amd64-linux)
+==8361==    by 0x580EB087: ??? (in /usr/libexec/valgrind/memcheck-amd64-linux)
+
+sched status:
+  running_tid=1
+
+Thread 1: status = VgTs_Runnable (lwpid 8361)
+==8361==    at 0x4846828: malloc (in /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so)
+==8361==    by 0x48F11B4: _IO_file_doallocate (filedoalloc.c:101)
+==8361==    by 0x4901523: _IO_doallocbuf (genops.c:347)
+==8361==    by 0x48FEF8F: _IO_file_overflow@@GLIBC_2.2.5 (fileops.c:745)
+==8361==    by 0x48FFAAE: _IO_new_file_xsputn (fileops.c:1244)
+==8361==    by 0x48FFAAE: _IO_file_xsputn@@GLIBC_2.2.5 (fileops.c:1197)
+==8361==    by 0x48CCCC8: __printf_buffer_flush_to_file (printf_buffer_to_file.c:59)
+==8361==    by 0x48CCCC8: __printf_buffer_to_file_done (printf_buffer_to_file.c:120)
+==8361==    by 0x48D7742: __vfprintf_internal (vfprintf-internal.c:1545)
+==8361==    by 0x48CC1B2: printf (printf.c:33)
+==8361==    by 0x1092BD: main (primes.c:29)
+client stack range: [0x1FFEFFD000 0x1FFF000FFF] client SP: 0x1FFEFFF860
+valgrind stack range: [0x1002CAA000 0x1002DA9FFF] top usage: 18232 of 1048576
+
+
+Note: see also the FAQ in the source distribution.
+It contains workarounds to several common problems.
+In particular, if Valgrind aborted or crashed after
+identifying problems in your program, there's a good chance
+that fixing those problems will prevent Valgrind aborting or
+crashing, especially if it happened in m_mallocfree.c.
+
+If that doesn't help, please report this bug to: www.valgrind.org
+
+In the bug report, send all the above text, the valgrind
+version, and what OS and version you are using.  Thanks.
+
