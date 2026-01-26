@@ -1,0 +1,14 @@
+	.data
+	.text
+	.globl main
+	# $t0 = gray
+	# $t1 = num
+	# $t2 = bin
+
+main:	li $t0, 
+
+	srl $t1, $t0, 1
+	xor $t1, $t1, $t0 
+	
+	jr $ra
+	
