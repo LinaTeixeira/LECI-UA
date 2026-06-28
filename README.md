@@ -23,3 +23,4 @@ Infelizmente não tenho todos os apontamentos/guiões/slides de todas as cadeira
  - [Numeral Systems](https://numeral-systems.com/ieee-754-converter/) para conversão entre decimal e IEEE-754 floating point
 <br/><br/>
 ---
+
