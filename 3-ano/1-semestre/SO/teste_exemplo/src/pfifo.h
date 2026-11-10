@@ -2,7 +2,7 @@
  * @brief A priority FIFO (implemented with a circular array),
  *        whose elements are pairs of integers, one being an
  *        non-negative id and the other a positive priority value.
- * 
+ *
  * The following operations are defined:
  *    \li initialization
  *    \li destruction
@@ -20,7 +20,7 @@
 #include  "settings.h"
 
 // TODO point: uncomment the desired implementation
-//#include <pthread.h>
+#include <pthread.h>
 //#include <semext.h>
 //#include <sys/wait.h>
 //#include <sys/shm.h>
@@ -38,7 +38,10 @@ typedef struct
    int out;  ///< point of retrieval (queue head)
    int cnt;  ///< number of items stored
    int is_closed; ///< true when closed
-   // TODO point: if necessary, add synchronization declarations here
+
+   pthread_mutex_t access;  // mutex para o fifo
+   pthread_cond_t notFull;  // variavel de condicao
+   pthread_cond_t notEmpty; // variavel de condicao
 } PriorityFIFO;
 
 void init_pfifo(PriorityFIFO* pfifo);

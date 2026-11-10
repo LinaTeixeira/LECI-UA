@@ -1,5 +1,6 @@
 #include <dbc.h>
 #include <hdp.h>
+#include <pthread.h>
 #include <string.h>
 #include "pfifo.h"
 
@@ -7,9 +8,13 @@ static void print_pfifo(PriorityFIFO* pfifo);
 static int empty_pfifo(PriorityFIFO* pfifo);
 static int full_pfifo(PriorityFIFO* pfifo);
 
-// TODO point: initialization changes may be required in this function
 void init_pfifo(PriorityFIFO* pfifo)
 {
+    // inicializamos o mutex e as variaveis
+   NZ(pthread_mutex_init(&pfifo->access, NULL));
+   NZ(pthread_cond_init(&pfifo->notFull, NULL));
+   NZ(pthread_cond_init(&pfifo->notEmpty, NULL));
+
    require (pfifo != NULL, "NULL pointer to FIFO");  // a false value indicates a program error
 
    for(int i = 0; i < FIFO_MAXSIZE; i++)
@@ -23,27 +28,33 @@ void init_pfifo(PriorityFIFO* pfifo)
 
 /* --------------------------------------- */
 
-// TODO point: termination changes may be required in this function
 void term_pfifo(PriorityFIFO* pfifo)
 {
    require (pfifo != NULL, "NULL pointer to FIFO");  // a false value indicates a program error
    require (is_closed_pfifo(pfifo), "FIFO open");
 
    memset(pfifo->array, 0, sizeof(pfifo->array));
+
+   // destruimos o mutex e as variaveis
+   NZ(pthread_mutex_destroy(&pfifo->access));
+   NZ(pthread_cond_destroy(&pfifo->notFull));
+   NZ(pthread_cond_destroy(&pfifo->notEmpty));
 }
 
 /* --------------------------------------- */
 
-// TODO point: synchronization changes may be required in this function
 void insert_pfifo(PriorityFIFO* pfifo, int id, int priority)
 {
    require (pfifo != NULL, "NULL pointer to FIFO");  // a false value indicates a program error
    require (id >= 0 && id <= MAX_ID, "invalid id");  // a false value indicates a program error
    require (priority > 0 && priority <= MAX_PRIORITY, "invalid priority value");  // a false value indicates a program error
-   require (pfifo->is_closed || !full_pfifo(pfifo), "open FIFO is full");  // IMPORTANT: in a shared fifo, it may not result from a program error!
+   //require (pfifo->is_closed || !full_pfifo(pfifo), "open FIFO is full");  // IMPORTANT: in a shared fifo, it may not result from a program error!
 
    //printf("[insert_pfifo] value=%d, priority=%d, pfifo->inp=%d, pfifo->out=%d\n", id, priority, pfifo->inp, pfifo->out);
-
+   NZ(pthread_mutex_lock(&pfifo->access));   // 1o passo é sempre dar lock ao pfifo
+   while(!pfifo->is_closed && full_pfifo(pfifo)){
+       NZ(pthread_cond_wait(&pfifo->notFull, &pfifo->access));
+   }
    if (!pfifo->is_closed)
    {
       int idx = pfifo->inp;
@@ -62,18 +73,25 @@ void insert_pfifo(PriorityFIFO* pfifo, int id, int priority)
       pfifo->array[idx].priority = priority;
       pfifo->inp = (pfifo->inp + 1) % FIFO_MAXSIZE;
       pfifo->cnt++;
+
       //printf("[insert_pfifo] pfifo->inp=%d, pfifo->out=%d\n", pfifo->inp, pfifo->out);
+      NZ(pthread_cond_broadcast(&pfifo->notEmpty)); // acabámos de inserir ent fazemos broadcast ao notEmpty
    }
+   NZ(pthread_mutex_unlock(&pfifo->access)); // no fim -> unlock
 }
 
 /* --------------------------------------- */
 
-// TODO point: synchronization changes may be required in this function
 int retrieve_pfifo(PriorityFIFO* pfifo)
 {
    require (pfifo != NULL, "NULL pointer to FIFO");   // a false value indicates a program error
-   require (pfifo->is_closed || !empty_pfifo(pfifo), "open FIFO is empty");  // IMPORTANT: in a shared fifo, it may not result from a program error!
+   //require (pfifo->is_closed || !empty_pfifo(pfifo), "open FIFO is empty");  // IMPORTANT: in a shared fifo, it may not result from a program error!
 
+   NZ(pthread_mutex_lock(&pfifo->access));
+
+   while(!pfifo->is_closed && empty_pfifo(pfifo)){
+       NZ(pthread_cond_wait(&pfifo->notEmpty, &pfifo->access));
+   }
    int result = -1;
    if (!pfifo->is_closed)
    {
@@ -93,29 +111,37 @@ int retrieve_pfifo(PriorityFIFO* pfifo)
          if (pfifo->array[idx].priority > 1 && pfifo->array[idx].priority != INVALID_PRIORITY)
             pfifo->array[idx].priority--;
          idx = (idx + 1) % FIFO_MAXSIZE;
+
+         NZ(pthread_cond_broadcast(&pfifo->notFull));
       }
+
    }
 
    ensure ((result >= 0 && result <= MAX_ID) || is_closed_pfifo(pfifo), "OPEN FIFO with an invalid id");  // a false value indicates a program error
-
+   NZ(pthread_mutex_unlock(&pfifo->access));
    return result;
 }
 
-// TODO point: synchronization changes may be required in this function
 void close_pfifo(PriorityFIFO* pfifo)
 {
    require (pfifo != NULL, "NULL pointer to FIFO");           // a false value indicates a program error
-   require (!is_closed_pfifo(pfifo), "FIFO already closed");  // a false value indicates a program error
+
+   NZ(pthread_mutex_lock(&pfifo->access));
+   require (!pfifo->is_closed, "FIFO already closed");  // a false value indicates a program error
 
    pfifo->is_closed = 1;
+   NZ(pthread_cond_broadcast(&pfifo->notEmpty));
+   NZ(pthread_cond_broadcast(&pfifo->notFull));
+   NZ(pthread_mutex_unlock(&pfifo->access));
 }
 
-// TODO point: synchronization changes may be required in this function
 int is_closed_pfifo(PriorityFIFO* pfifo)
 {
    require (pfifo != NULL, "NULL pointer to FIFO");   // a false value indicates a program error
-
-   return pfifo->is_closed;
+   NZ(pthread_mutex_lock(&pfifo->access));
+   int res = pfifo->is_closed;
+   NZ(pthread_mutex_unlock(&pfifo->access));
+   return res;
 }
 
 /* --------------------------------------- */
@@ -151,4 +177,3 @@ static void print_pfifo(PriorityFIFO* pfifo)
       idx = (idx + 1) % FIFO_MAXSIZE;
    }
 }
-
